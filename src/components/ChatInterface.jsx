@@ -48,7 +48,7 @@ const ChatInterface = () => {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden flex flex-col" style={{ height: "calc(100vh - 12rem)" }}>
+      <Card className="overflow-auto flex flex-col" style={{ height: "calc(100vh - 12rem)" }}>
         {latestUserMessage && (
           <div className="bg-gray-100 p-4 border-b">
             <p className="text-center">{latestUserMessage.content}</p>
