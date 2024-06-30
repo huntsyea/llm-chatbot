@@ -1,4 +1,4 @@
-export const getLLMResponse = async (input) => {
+export const getLLMResponse = async (input, model) => {
   try {
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -6,13 +6,11 @@ export const getLLMResponse = async (input) => {
         method: "POST",
         headers: {
           Authorization: `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
-          "HTTP-Referer": import.meta.env.VITE_SITE_URL, // Optional
-          "X-Title": import.meta.env.VITE_SITE_NAME, // Optional
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemma-2-9b-it:free",
-          messages: [{ role: "user", content: `explain: ${input}. Format topically. Do not include an initial title. Subttopics should include contextual information`}],
+          model: model,
+          messages: [{role: "system", content: "Output raw markdown. Deeply explain topics in a contextual way broken out by sub-topics with headings. All subtopics must contain contex about the {user message}. Never include a Conclusion."}, { role: "user", content: `explain in detail: ${input}. Never speak to the user or provide context on your response. Do not include initial title.`}],
         }),
       },
     );
