@@ -2,31 +2,14 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const ChatMessage = ({ message, onTopicClick }) => {
-  const isUser = message.type === 'user';
+const ChatMessage = ({ message }) => {
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`rounded-lg px-4 py-2 max-w-[80%] ${
-        isUser ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-      }`}>
+    <div className="flex justify-start w-full">
+      <div className="bg-secondary justify-start text-secondary-foreground rounded-lg px-4 py-2 max-w-[100%]">
         <ReactMarkdown 
-          children={message.content} 
+          children={message.content}
           remarkPlugins={[remarkGfm]}
-          components={{
-            a: ({ href, children }) => (
-              <a 
-                href={href} 
-                className="underline hover:text-accent-foreground" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  onTopicClick(href);
-                }}
-              >
-                {children}
-              </a>
-            ),
-            p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />
-          }}
+          className="markdown-content"
         />
       </div>
     </div>

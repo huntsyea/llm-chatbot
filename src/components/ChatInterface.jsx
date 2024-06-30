@@ -1,63 +1,64 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import ChatMessage from './ChatMessage';
 import { getLLMResponse } from '../api/openRouter';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = async (e) => {
+    if (e.key === 'Enter' && input.trim()) {
+      const newUserMessage = { type: "user", content: input.trim() };
+      setMessages(prev => [...prev, newUserMessage]);
+      setInput("");
+      
+      try {
+        const aiResponse = await getLLMResponse(input.trim());
+        setMessages(prev => [...prev, { type: "ai", content: aiResponse }]);
+      } catch (error) {
+        console.error("Error fetching AI response:", error);
+        // Handle error (e.g., show error message to user)
+      }
+    }
   };
 
-  useEffect(scrollToBottom, [messages]);
-
-  const handleSend = async () => {
-    if (!input.trim()) return;
-
-    setMessages(prev => [...prev, { type: 'user', content: input }]);
-
-    // Call the actual API
-    const aiResponse = await getLLMResponse(input);
-
-    setMessages(prev => [...prev, { type: 'ai', content: aiResponse }]);
-    setInput('');
-  };
-
-  const handleTopicClick = (topic) => {
-    setInput(`Tell me more about ${topic}`);
-  };
+  const latestUserMessage = messages.filter(msg => msg.type === "user").pop();
 
   return (
-    <>
-      <div className="flex-grow overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, index) => (
-          <ChatMessage 
-            key={index} 
-            message={msg} 
-            onTopicClick={handleTopicClick} 
-          />
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className="p-4 bg-background border-t border-border">
-        <div className="flex space-x-2">
+    <div className="w-full max-w-3xl space-y-4">
+      <Card className="shadow-m">
+        <CardContent className="p-1">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            className="flex-grow"
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            onKeyPress={handleSend}
+            placeholder="What's your next wabbit hole?"
+            className="w-full border-none shadow-none"
           />
-          <Button onClick={handleSend} className="bg-primary text-primary-foreground hover:bg-primary/90">
-            Send
-          </Button>
-        </div>
-      </div>
-    </>
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden flex flex-col" style={{ height: "calc(100vh - 12rem)" }}>
+        {latestUserMessage && (
+          <div className="bg-gray-100 p-4 border-b">
+            <p className="text-center">{latestUserMessage.content}</p>
+          </div>
+        )}
+        <CardContent className="flex-grow overflow-y-auto p-4 space-y-4">
+          {messages.filter(msg => msg.type === "ai").map((msg, index) => (
+            <ChatMessage key={index} message={msg} />
+          ))}
+          <div ref={messagesEndRef} />
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
