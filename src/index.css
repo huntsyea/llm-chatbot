@@ -108,6 +108,10 @@
   .scrollbar-thin::-webkit-scrollbar-track {
     background: theme('colors.gray.100');
   }
+    .h-screen-safe {
+      height: 100vh;
+      height: 100dvh;
+    }
   
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: theme('colors.gray.400');

@@ -3,10 +3,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import ChatMessage from './ChatMessage';
 import { getLLMResponse } from '../api/openRouter';
+import ModelSelector from './ModelSelector';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [selectedModel, setSelectedModel] = useState("meta-llama/llama-3-8b-instruct:free");
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ const ChatInterface = () => {
       setInput("");
       
       try {
-        const aiResponse = await getLLMResponse(input.trim());
+        const aiResponse = await getLLMResponse(input.trim(), selectedModel);
         setMessages(prev => [...prev, { type: "ai", content: aiResponse }]);
       } catch (error) {
         console.error("Error fetching AI response:", error);
@@ -34,7 +36,7 @@ const ChatInterface = () => {
   return (
     <div className="w-full max-w-3xl space-y-4">
       <Card className="shadow-m">
-        <CardContent className="p-1">
+        <CardContent className="p-2 flex items-center">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -42,6 +44,7 @@ const ChatInterface = () => {
             placeholder="What's your next wabbit hole?"
             className="w-full border-none shadow-none"
           />
+          <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} />
         </CardContent>
       </Card>
 
