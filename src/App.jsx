@@ -3,8 +3,8 @@ import ChatInterface from "./components/ChatInterface";
 
 function App() {
   return (
-    <div className="min-h-screen bg-muted flex flex-col">
-      <div className="flex-shrink-0 flex flex-col items-center pt-6 sm:pt-12">
+    <div className="flex max-h-screen bg-muted flex-col justify-center ">
+      <div className="flex flex-col items-center mb-2 justify-center">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -23,11 +23,11 @@ function App() {
           <path d="M20 8.54V4a2 2 0 1 0-4 0v3" />
           <path d="M7.612 12.524a3 3 0 1 0-1.6 4.3" />
         </svg>
-        <h1 className="text-xl sm:text-3xl font-bold mb-4 text-primary">
+        <h1 className="text-xl sm:text-3xl font-bold text-primary">
           wabbit
         </h1>
       </div>
-      <div className="flex-grow flex items-center justify-center px-4 pb-6">
+      <div className="flex items-center justify-center">
         <ChatInterface />
       </div>
     </div>

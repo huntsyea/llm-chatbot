@@ -34,7 +34,7 @@ const ChatInterface = () => {
   const latestUserMessage = messages.filter(msg => msg.type === "user").pop();
 
   return (
-    <div className="w-full max-w-3xl space-y-4">
+    <div className="w-full max-w-4xl space-y-4">
       <Card className="shadow-m">
         <CardContent className="p-2 flex items-center">
           <Input
@@ -48,7 +48,7 @@ const ChatInterface = () => {
         </CardContent>
       </Card>
 
-      <Card className="overflow-auto flex flex-col" style={{ height: "calc(100vh - 12rem)" }}>
+      <Card className="overflow-auto flex flex-col" style={{ height: "calc(100vh - 15rem)"}}>
         {latestUserMessage && (
           <div className="bg-gray-100 p-4 border-b">
             <p className="text-center">{latestUserMessage.content}</p>
