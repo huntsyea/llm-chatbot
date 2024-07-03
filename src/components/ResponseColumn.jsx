@@ -39,13 +39,13 @@ const ResponseColumn = ({ response, columnIndex }) => {
   };
 
   return (
-    <Card className="overflow-y-auto flex flex-col max-w-screen-lg">
+    <Card className="w-full h-[calc(100vh-12rem)] min-h-[400px] flex flex-col">
       {response.query && (
         <div className="bg-gray-100 p-4 border-b">
           <p className="text-center">{response.query}</p>
         </div>
       )}
-      <CardContent className="flex-grow overflow-y-auto p-4 space-y-4">
+      <CardContent className="flex-grow overflow-y-auto p-4 space-y-4 scrollbar-thin">
         {response.messages.map((msg, index) => (
           <ChatMessage key={index} message={msg} onTopicClick={handleTopicClick} />
         ))}

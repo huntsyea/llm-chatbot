@@ -52,7 +52,6 @@
 #root {
 
   margin: 0 auto;
-  padding: 2rem;
   text-align: center;
 }
 
@@ -117,7 +116,18 @@
     background-color: theme('colors.gray.400');
     border-radius: 3px;
   }
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }
+
 
 @layer components {
   .markdown-content {

@@ -42,23 +42,25 @@ const InputArea = () => {
   };
 
   return (
-    <div className='max-w-4xl items-center'>
-    <Card className="shadow-m">
-      <CardContent className="p-2 flex">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleSend}
-          placeholder="What's your next wabbit hole?"
-          className="w-full border-none shadow-none mr-2"
-          disabled={isLoading}
-        />
-        <ModelSelector className="ml-5"
-          selectedModel={selectedModel}
-          onSelectModel={(model) => dispatch({ type: 'SET_MODEL', payload: model })}
-        />
-      </CardContent>
-    </Card>
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto">
+          <Card className="shadow-md">
+            <CardContent className="flex p-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleSend}
+            placeholder="What's your next wabbit hole?"
+            className="flex-grow border-none shadow-none mr-2"
+            disabled={isLoading}
+          />
+          <ModelSelector
+            selectedModel={selectedModel}
+            onSelectModel={(model) => dispatch({ type: 'SET_MODEL', payload: model })}
+          />
+        </CardContent>
+      </Card>
+    </div>
     </div>
   );
 };

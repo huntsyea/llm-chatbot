@@ -3,10 +3,10 @@ import ChatInterface from "./components/ChatInterface";
 
 function App() {
   return (
-    <div className="flex max-h-screen bg-muted  flex-col">
-      <div className="flex flex-col mb-2 align-top">
-        <h1 className="text-xl sm:text-3xl font-bold text-primary align">
-          <span style={{ display: 'inline-flex', alignItems: 'baseline', marginLeft: '4px', marginRight: '3px' }}>
+    <div className="min-h-screen bg-muted flex flex-col items-center">
+      <header className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <h1 className="text-xl sm:text-3xl font-bold text-primary flex items-center justify-center">
+          <span className="inline-flex items-baseline mr-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -28,10 +28,10 @@ function App() {
           </span>
           wabbit
         </h1>
-      </div>
-      <div className="mx-auto">
+      </header>
+      <main className="w-full flex-grow">
         <ChatInterface />
-      </div>
+      </main>
     </div>
   );
 }
