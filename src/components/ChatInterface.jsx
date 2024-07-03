@@ -6,7 +6,7 @@ import ResponseList from './ResponseList';
 const ChatInterface = () => {
   return (
     <ChatProvider>
-      <div className=" space-y-4 flex-col align-middle">
+      <div className="space-y-4">
         <InputArea />
         <ResponseList />
       </div>
