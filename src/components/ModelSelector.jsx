@@ -21,7 +21,6 @@ const models = [
   { name: "Toppy M 7B", value: "undi95/toppy-m-7b:free" },
   { name: "Nous Capybara 7B", value: "nousresearch/nous-capybara-7b:free" },
   { name: "OpenChat 3.5 7B", value: "openchat/openchat-7b:free"},
-  { name: "RWKV .5 3B AI Town", value: "recursal/rwkv-5-3b-ai-town"}
   // Add more models here
 ];
 
