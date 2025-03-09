@@ -29,7 +29,8 @@ export type ChatAction =
   | { type: string; payload: unknown }; // Extension point
 
 /** Default Gemini configuration */
-export const defaultGeminiConfig: GeminiModelConfig = {
+export const defaultGeminiConfig: GeminiApiOptions = {
+  model: "gemini-2.0-flash",
   temperature: 0.7,
   topK: 40,
   topP: 0.9,
