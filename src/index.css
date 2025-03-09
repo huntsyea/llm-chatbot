@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Card carousel styles */
+.card-carousel {
+  perspective: 1500px;
+}
+
+.card-carousel-item {
+  transition: transform 400ms cubic-bezier(0.25, 1, 0.5, 1), opacity 400ms ease, z-index 0ms;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius);
+  will-change: transform, opacity;
+  max-width: 100%; /* Ensure items don't exceed container width */
+}
+
+/* Container widths */
+.container-1200 {
+  width: 100% !important;
+  max-width: 1200px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Card styles */
+.card-full-width {
+  width: 100% !important;
+}
+
+.markdown-content {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -50,7 +83,6 @@
 }
 
 #root {
-
   margin: 0 auto;
   text-align: center;
 }
@@ -107,39 +139,132 @@
   .scrollbar-thin::-webkit-scrollbar-track {
     background: theme('colors.gray.100');
   }
-    .h-screen-safe {
-      height: 100vh;
-      height: 100dvh;
-    }
+  
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
   
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: theme('colors.gray.400');
     border-radius: 3px;
   }
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
 }
-
 
 @layer components {
   .markdown-content {
-    @apply text-left;
+    @apply text-left w-full;
   }
+
+  /* Style for Wabbit Trail header */
+  .wabbit-trail-header {
+    @apply text-primary font-semibold;
+  }
+  
+  /* Lists styling */
   .markdown-content ul {
     @apply list-disc pl-5 mb-4 last:mb-0 text-left;
   }
   .markdown-content ol {
     @apply list-decimal pl-5 mb-4 last:mb-0 text-left;
   }
+  
+  /* Paragraph styling */
   .markdown-content p {
     @apply mb-4 last:mb-0 text-left;
+  }
+  
+  /* Table styling */
+  .markdown-content table {
+    @apply w-full border-collapse border border-gray-300 mb-4;
+  }
+  .markdown-content th {
+    @apply border border-gray-300 px-4 py-2 text-left bg-gray-100;
+  }
+  .markdown-content td {
+    @apply border border-gray-300 px-4 py-2 text-left;
+  }
+  
+  /* Code blocks */
+  .markdown-content pre {
+    @apply bg-gray-100 p-3 rounded-md overflow-x-auto mb-4;
+  }
+  
+  /* Blockquotes */
+  .markdown-content blockquote {
+    @apply pl-4 border-l-4 border-gray-300 italic my-4;
+  }
+  
+  /* Headings */
+  .markdown-content h1, 
+  .markdown-content h2, 
+  .markdown-content h3, 
+  .markdown-content h4, 
+  .markdown-content h5, 
+  .markdown-content h6 {
+    @apply text-left font-bold mb-2 cursor-pointer relative;
+  }
+  
+  .markdown-content h1 { 
+    @apply text-2xl mb-4 hover:text-primary hover:underline; 
+  }
+  .markdown-content h2 { 
+    @apply text-xl mb-3 hover:text-primary hover:underline; 
+  }
+  .markdown-content h3 { 
+    @apply text-base mb-2 hover:text-primary hover:underline; 
+  }
+  .markdown-content h4 { 
+    @apply text-base hover:text-primary hover:underline; 
+  }
+  .markdown-content h5 { 
+    @apply text-sm hover:text-primary hover:underline; 
+  }
+  .markdown-content h6 { 
+    @apply text-xs hover:text-primary hover:underline; 
+  }
+  
+  /* Specific styles for markdown headings */
+  .markdown-heading {
+    @apply cursor-pointer text-foreground hover:text-primary hover:underline pointer-events-auto !important;
+  }
+  
+  /* Add pointer cursor to all headings */
+  h1, h2, h3, h4, h5, h6 {
+    cursor: pointer !important;
+  }
+  
+  .markdown-h1 {
+    @apply text-xl font-bold mb-4 !important;
+  }
+  
+  .markdown-h2 {
+    @apply text-lg font-bold mb-3 !important;
+  }
+  
+  .markdown-h3 {
+    @apply text-base font-bold mb-2 !important;
+  }
+  
+  .markdown-h4 {
+    @apply text-base font-bold mb-2 !important;
+  }
+  
+  .markdown-h5 {
+    @apply text-sm font-bold mb-1 !important;
+  }
+  
+  .markdown-h6 {
+    @apply text-xs font-bold mb-1 !important;
+  }
+  
+  /* Images */
+  .markdown-content img {
+    @apply max-w-full h-auto my-4 mx-auto;
+  }
+  
+  /* Force content to wrap when needed */
+  .markdown-content * {
+    @apply break-words;
   }
 }
