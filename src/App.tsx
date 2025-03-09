@@ -1,10 +1,16 @@
 import React from "react";
 import ChatInterface from "./components/ChatInterface";
 
-function App() {
+/**
+ * App component serves as the root of the application. It contains the header
+ * with logo and main application area.
+ *
+ * @returns React component
+ */
+const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-muted flex flex-col items-center">
-      <header className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="w-full container-1200 px-4 sm:px-6 lg:px-8 py-4">
         <h1 className="text-xl sm:text-3xl font-bold text-primary flex items-center justify-center">
           <span className="inline-flex items-baseline mr-2">
             <svg
@@ -29,11 +35,11 @@ function App() {
           wabbit
         </h1>
       </header>
-      <main className="w-full flex-grow">
+      <main className="w-full container-1200 flex-grow">
         <ChatInterface />
       </main>
     </div>
   );
-}
+};
 
 export default App;
