@@ -3,8 +3,9 @@ import MarkdownMessage from "./MarkdownMessage";
 import { Response } from "../interfaces/core";
 import { useChatState, useChatDispatch } from "../hooks/useChatContext";
 import { createTopicClickHandler } from "../lib/topicHandler";
-import { ApiClientRegistryImpl } from "../services/api/ApiClientRegistry";
+import { ApiClientRegistryImpl, apiClientRegistry } from "../services/api/ApiClientRegistry";
 import { getModelByValue } from "../lib/models";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 /** Props for the ChatResponseCard component */
 interface ChatResponseCardProps {
@@ -45,14 +46,42 @@ const ChatResponseCard: React.FC<ChatResponseCardProps> = ({ response, onDragSta
     dispatch({ type: "ADD_RESPONSE", payload: newResponse });
   };
 
-  const apiClientRegistry = new ApiClientRegistryImpl();
   const modelDef = getModelByValue(selectedModel);
   const provider = modelDef ? modelDef.provider : "unknown";
   const apiKey =
     provider === "openrouter"
       ? import.meta.env.VITE_OPENROUTER_API_KEY
       : import.meta.env.VITE_GEMINI_API_KEY;
-  const apiClient = apiClientRegistry.get(provider, apiKey || "");
+      
+  if (!apiKey) {
+    console.error(`No API key found for provider: ${provider}`);
+    return (
+      <Card className="w-full bg-white dark:bg-slate-800 shadow-md relative overflow-hidden mb-4">
+        <CardHeader>
+          <CardTitle>Error: Missing API Key</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Missing API key for {provider} provider. Please check your environment variables.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const apiClient = apiClientRegistry.get(provider, apiKey);
+  
+  if (!apiClient) {
+    console.error(`No API client found for provider: ${provider}`);
+    return (
+      <Card className="w-full bg-white dark:bg-slate-800 shadow-md relative overflow-hidden mb-4">
+        <CardHeader>
+          <CardTitle>Error: API Client Unavailable</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>No API client available for {provider} provider.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleTopicClick = createTopicClickHandler({
     response,

@@ -3,7 +3,7 @@ import { Response } from "../interfaces/core";
 import EnhancedMarkdown from "./markdown/EnhancedMarkdown";
 import { useChatState } from "../hooks/useChatContext";
 import { createTopicClickHandler } from "../lib/topicHandler";
-import { ApiClientRegistryImpl } from "../services/api/ApiClientRegistry";
+import { ApiClientRegistryImpl, apiClientRegistry } from "../services/api/ApiClientRegistry";
 import { getModelByValue } from "../lib/models";
 
 /** Props for the MarkdownMessage component */
@@ -21,7 +21,7 @@ interface MarkdownMessageProps {
   addResponse: (response: Response) => void;
 
   /** Handler for topic clicks */
-  onTopicClick: (topic: string) => Promise<void>;
+  onTopicClick?: (topic: string) => Promise<void>;
 }
 
 /**
@@ -42,17 +42,37 @@ const MarkdownMessage: React.FC<MarkdownMessageProps> = ({
   const { selectedModel } = useChatState();
 
   // Fetch the API client for the selected model's provider from the registry
-  const apiClientRegistry = new ApiClientRegistryImpl();
   const modelDef = getModelByValue(selectedModel);
   const provider = modelDef ? modelDef.provider : "unknown";
   const apiKey =
     provider === "openrouter"
       ? import.meta.env.VITE_OPENROUTER_API_KEY
       : import.meta.env.VITE_GEMINI_API_KEY;
-  const apiClient = apiClientRegistry.get(provider, apiKey || "");
+      
+  if (!apiKey) {
+    console.error(`No API key found for provider: ${provider}`);
+    return (
+      <div className="prose dark:prose-invert max-w-none">
+        <div className="p-4 bg-red-100 dark:bg-red-900 rounded-md">
+          Error: Missing API key for {provider} provider. Please check your environment variables.
+        </div>
+        <EnhancedMarkdown content={message} />
+      </div>
+    );
+  }
+  
+  const apiClient = apiClientRegistry.get(provider, apiKey);
 
   if (!apiClient) {
     console.error(`No API client found for provider: ${provider} (model: ${selectedModel})`);
+    return (
+      <div className="prose dark:prose-invert max-w-none">
+        <div className="p-4 bg-red-100 dark:bg-red-900 rounded-md">
+          Error: No API client available for {provider} provider.
+        </div>
+        <EnhancedMarkdown content={message} />
+      </div>
+    );
   }
 
   // Handle element click events from the markdown
@@ -92,4 +112,4 @@ const MarkdownMessage: React.FC<MarkdownMessageProps> = ({
   );
 };
 
-export default MarkdownMessage; 
+export default MarkdownMessage;

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useChatState, useChatDispatch } from "../hooks/useChatContext";
-import { ApiClientRegistryImpl } from "../services/api/ApiClientRegistry";
+import { ApiClientRegistryImpl, apiClientRegistry } from "../services/api/ApiClientRegistry";
 import { Response } from "../interfaces/core";
 import {
   DropdownMenu,
@@ -21,8 +21,6 @@ const QueryInput: React.FC<QueryInputProps> = ({ disabled }) => {
   const [query, setQuery] = useState("");
   const { selectedModel } = useChatState();
   const dispatch = useChatDispatch();
-
-  const apiClientRegistry = new ApiClientRegistryImpl();
 
   // Sample recommended queries
   const recommendedQueries = [
@@ -56,6 +54,8 @@ const QueryInput: React.FC<QueryInputProps> = ({ disabled }) => {
       if (!apiKey) {
         throw new Error(`No API key found for provider: ${provider}`);
       }
+      
+      console.log(`Using ${provider} API key (first 5 chars): ${apiKey.substring(0, 5)}...`);
 
       const apiClient = apiClientRegistry.get(provider, apiKey);
       if (!apiClient) {
