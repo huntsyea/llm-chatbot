@@ -1,18 +1,18 @@
-/** @type {import('tailwindcss').Config} */
+/* eslint-env node */
+/** @type {import("tailwindcss").Config} */
 module.exports = {
   darkMode: ["class"],
   content: [
-    "./pages/**/*.{js,jsx}",
-    "./components/**/*.{js,jsx}",
-    "./app/**/*.{js,jsx}",
-    "./src/**/*.{js,jsx}",
+    "./pages/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
     container: {
       center: true,
       padding: "2rem",
-      screens: {
-      },
+      screens: {},
     },
     extend: {
       colors: {
