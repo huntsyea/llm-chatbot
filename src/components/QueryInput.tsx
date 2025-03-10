@@ -65,6 +65,7 @@ const QueryInput: React.FC<QueryInputProps> = ({ disabled }) => {
       const responseText = await apiClient.generateResponse(finalQuery, {
         model: selectedModel,
       });
+      console.log("Raw LLM response:", responseText); // Debug log for input markdown
 
       const newResponse: Response = {
         query: finalQuery,

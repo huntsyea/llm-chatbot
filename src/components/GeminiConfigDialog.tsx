@@ -40,7 +40,7 @@ const GeminiConfigDialog: React.FC<GeminiConfigDialogProps> = ({
     temperature: modelConfig.temperature ?? 0.7,
     topK: modelConfig.topK ?? 40,
     topP: modelConfig.topP ?? 0.9,
-    maxOutputTokens: modelConfig.maxOutputTokens ?? 2048,
+    maxOutputTokens: modelConfig.maxOutputTokens ?? 3900,
   });
 
   // Update local state when a parameter changes

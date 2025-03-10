@@ -34,7 +34,7 @@ export const defaultGeminiConfig: GeminiApiOptions = {
   temperature: 0.7,
   topK: 40,
   topP: 0.9,
-  maxOutputTokens: 2048,
+  maxOutputTokens: 3900,
 };
 
 /** Initial state for the chat context */

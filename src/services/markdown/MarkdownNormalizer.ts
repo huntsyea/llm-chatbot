@@ -23,6 +23,9 @@ export interface MarkdownNormalizationOptions {
   /** Ensure code blocks use proper fencing and language tags */
   enforceCodeBlocks?: boolean;
 
+  /** Convert standalone bolded lines to ## headings */
+  convertBoldedToHeadings?: boolean;
+
   /** Extension point: additional normalization options */
   [key: string]: unknown;
 }
@@ -46,6 +49,7 @@ export class MarkdownService {
       standardizeTables = true,
       sanitizeHTML = true,
       enforceCodeBlocks = true,
+      convertBoldedToHeadings = false,
     } = options;
 
     let normalizedMarkdown = markdown;
@@ -71,7 +75,11 @@ export class MarkdownService {
       normalizedMarkdown = this.enforceCodeBlocks(normalizedMarkdown);
     }
 
-    return normalizedMarkdown;
+    if (convertBoldedToHeadings) {
+      normalizedMarkdown = this.convertBoldedLinesToHeadings(normalizedMarkdown);
+    }
+
+    return normalizedMarkdown.trim(); // Ensure no trailing whitespace
   }
 
   /**
@@ -81,9 +89,12 @@ export class MarkdownService {
    * @returns Markdown with standardized headings
    */
   private standardizeHeadings(markdown: string): string {
+    // Convert numbered headings (e.g., "1. Elliptic Curves:") to ## syntax
+    let result = markdown.replace(/^(\d+\.\s+(.+?):)$/gm, "## $2");
+
     // Convert underlined headings to # syntax
     // Example: Convert "Heading\n=======" to "# Heading"
-    let result = markdown.replace(/^(.+)\n=+$/gm, "# $1");
+    result = result.replace(/^(.+)\n=+$/gm, "# $1");
 
     // Convert underlined subheadings to ## syntax
     // Example: Convert "Subheading\n--------" to "## Subheading"
@@ -110,7 +121,33 @@ export class MarkdownService {
     result = result.replace(/^(\s*-\S)/gm, "$1 ");
     result = result.replace(/^(\s*\d+\.\S)/gm, "$1 ");
 
-    return result;
+    // Preserve math expressions within lists and avoid overzealous deduplication
+    const lines = result.split("\n");
+    const seenLines = new Set<string>();
+    result = lines
+      .map((line) => {
+        const match = line.match(/^(\s*[-|\d+\.]\s*)(.+)$/);
+        if (match) {
+          const [, prefix, content] = match;
+          // Skip deduplication for lines with math to prevent removal
+          if (content.match(/\$|∏|ε/)) {
+            return line;
+          }
+          const lineKey = `${prefix}${content}`.trim();
+          if (seenLines.has(lineKey)) {
+            return ""; // Remove duplicate
+          }
+          seenLines.add(lineKey);
+        }
+        return line;
+      })
+      .filter((line) => line.trim() !== "")
+      .join("\n");
+
+    // Remove empty list items
+    result = result.replace(/^\s*-\s*$/gm, "");
+
+    return result.trim();
   }
 
   /**
@@ -200,24 +237,54 @@ export class MarkdownService {
   }
 
   /**
-   * Ensure code blocks use proper fencing and language tags
+   * Ensure code blocks use proper fencing and language tags, while preserving nested lists and math
    *
    * @param markdown - The markdown content to process
    * @returns Markdown with standardized code blocks
    */
   private enforceCodeBlocks(markdown: string): string {
     let result = markdown;
+    const lines = result.split("\n");
+    let i = 0;
+    const newLines: string[] = [];
 
-    // Convert indented code blocks to fenced code blocks
-    // Find blocks that are indented with 4 spaces or a tab
-    const indentedCodeBlockRegex = /(?:^(?:[ ]{4}|\t).*[\r\n]+)+/gm;
+    while (i < lines.length) {
+      const line = lines[i];
+      // Match lines that are indented with 4 spaces or a tab, but exclude list items and math
+      const indentedCodeBlockMatch = line.match(
+        /^(?![ ]{0,3}(?:[-*+]|\d+\.|\$.*\$))([ ]{4}|\t)(.*)$/
+      );
 
-    result = result.replace(indentedCodeBlockRegex, (match) => {
-      // Remove the indentation from each line
-      const code = match.replace(/^(?:[ ]{4}|\t)/gm, "");
-      // Wrap in fenced code block
-      return "```\n" + code.trim() + "\n```\n";
-    });
+      if (indentedCodeBlockMatch) {
+        const [, indent, content] = indentedCodeBlockMatch;
+        const codeLines: string[] = [content.trim()];
+        let j = i + 1;
+
+        // Collect consecutive indented lines, excluding list items and math
+        while (j < lines.length) {
+          const nextLine = lines[j];
+          const nextMatch = nextLine.match(
+            /^(?![ ]{0,3}(?:[-*+]|\d+\.|\$.*\$))([ ]{4}|\t)(.*)$/
+          );
+          if (nextMatch) {
+            codeLines.push(nextMatch[2].trim());
+            j++;
+          } else {
+            break;
+          }
+        }
+
+        // Create a fenced code block
+        const codeBlock = "```\n" + codeLines.join("\n") + "\n```";
+        newLines.push(codeBlock);
+        i = j; // Move the index to the next unprocessed line
+      } else {
+        newLines.push(line);
+        i++;
+      }
+    }
+
+    result = newLines.join("\n");
 
     // Standardize fenced code blocks
     // Ensure consistent syntax for code blocks (prefer ``` over ~~~)
@@ -232,5 +299,22 @@ export class MarkdownService {
     result = result.replace(/```\n(?![\r\n])/gm, "```\n\n");
 
     return result;
+  }
+
+  /**
+   * Convert standalone bolded lines to ## headings
+   *
+   * @param markdown - The markdown content to process
+   * @returns Markdown with bolded standalone lines converted to headings
+   */
+  private convertBoldedLinesToHeadings(markdown: string): string {
+    // Match lines that are entirely bolded (wrapped in **), standalone (not within paragraphs or lists)
+    const boldedLineRegex = /^(\*\*[^\n*]+(?: [^\n*]+)*\*\*)$/gm;
+
+    return markdown.replace(boldedLineRegex, (match, boldedText) => {
+      // Remove the bold markers and prepend with ##
+      const headingText = boldedText.slice(2, -2).trim();
+      return `## ${headingText}`;
+    });
   }
 } 

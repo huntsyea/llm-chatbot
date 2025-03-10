@@ -29,7 +29,7 @@ class OpenRouterApiClient implements ApiClient {
             { role: "user", content: prompt },
           ],
           temperature: options.temperature ?? 0.7,
-          max_tokens: options.maxTokens ?? 2048,
+          max_tokens: options.maxTokens ?? 3900,
         },
         {
           headers: {
@@ -57,7 +57,7 @@ class OpenRouterApiClient implements ApiClient {
     previousContext: string,
     options: ApiClientOptions
   ): Promise<string> {
-    const prompt = `Based on the previous query: "${previousContext}", provide a detailed response about "${topic}".`;
+    const prompt = `Based on the previous query: "${previousContext}", provide a detailed response following previous format about "${topic}".`;
     return this.generateResponse(prompt, options);
   }
 }

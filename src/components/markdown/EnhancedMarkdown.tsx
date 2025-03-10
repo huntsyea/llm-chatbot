@@ -3,12 +3,16 @@
  *
  * This component provides a standardized way to render markdown content with
  * consistent formatting, interactive elements, and normalized display across
- * different LLM sources.
+ * different LLM sources. All headers and bold text are made clickable to trigger new queries.
+ * Supports math rendering with $ for inline and $$ for display equations.
  */
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import type { Components } from "react-markdown";
+import { visit } from "unist-util-visit"; // Added for AST manipulation
 import {
   MarkdownService,
   MarkdownNormalizationOptions,
@@ -52,13 +56,17 @@ const MarkdownHeading: React.FC<MarkdownHeadingProps> = ({
   onElementClick,
   ...props
 }) => {
-  const headerText = String(children).trim();
+  // Extract header text by flattening children to a string
+  const headerText = React.Children.toArray(children)
+    .map(child => (typeof child === "string" ? child : String(child)))
+    .join("")
+    .trim();
 
-  // Define styling based on heading level
+  // Define styling based on heading level, consistent with prompt's H2 and H3 focus
   const styles = {
     1: "text-xl font-bold mb-4 markdown-h1",
-    2: "text-lg font-bold mb-3 markdown-h2",
-    3: "text-base font-bold mb-2 markdown-h3",
+    2: "text-lg font-bold mb-3 markdown-h2", // Matches ## in prompt
+    3: "text-base font-bold mb-2 markdown-h3", // Matches ### in prompt
     4: "text-base font-bold mb-2 markdown-h4",
     5: "text-sm font-bold mb-1 markdown-h5",
     6: "text-xs font-bold mb-1 markdown-h6",
@@ -69,8 +77,10 @@ const MarkdownHeading: React.FC<MarkdownHeadingProps> = ({
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Heading clicked:", { level, headerText });
-    onElementClick?.("heading", headerText);
+    if (headerText && onElementClick) {
+      console.log("Heading clicked:", { level, headerText });
+      onElementClick("heading", headerText);
+    }
   };
 
   const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
@@ -83,6 +93,44 @@ const MarkdownHeading: React.FC<MarkdownHeadingProps> = ({
     >
       {children}
     </HeadingTag>
+  );
+};
+
+/** Reusable bold component for clickable bold text */
+interface MarkdownBoldProps {
+  children: React.ReactNode;
+  onElementClick?: (element: string, text: string) => void;
+  [key: string]: unknown;
+}
+
+const MarkdownBold: React.FC<MarkdownBoldProps> = ({
+  children,
+  onElementClick,
+  ...props
+}) => {
+  // Extract bold text by flattening children to a string
+  const boldText = React.Children.toArray(children)
+    .map(child => (typeof child === "string" ? child : String(child)))
+    .join("")
+    .trim();
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (boldText && onElementClick) {
+      console.log("Bold text clicked:", { boldText });
+      onElementClick("bold", boldText);
+    }
+  };
+
+  return (
+    <strong
+      className="font-bold cursor-pointer hover:text-primary hover:underline markdown-bold"
+      onClick={handleClick}
+      {...props}
+    >
+      {children}
+    </strong>
   );
 };
 
@@ -112,10 +160,33 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
     return content;
   }, [content, normalize, normalizationOptions, markdownService]);
 
+  // Debug function to log and clean math nodes without affecting list items
+  const cleanMathNodes = (tree: any) => {
+    console.log("Processing markdown AST for math cleanup:", JSON.stringify(tree, null, 2));
+    visit(tree, "math", (mathNode, mathIndex, mathParent) => {
+      console.log("Found math node:", mathNode);
+      // Check for raw LaTeX text that failed to parse, but avoid list items
+      visit(tree, "text", (textNode, textIndex, textParent) => {
+        if (textNode.value && (textNode.value.includes("$") || textNode.value.includes("$$"))) {
+          const isPrecededByMath = textParent.children[textIndex - 1]?.type === "math";
+          const isInList = textParent.type === "list" || textParent.type === "listItem";
+          // Only remove if it's raw LaTeX that failed to parse and not within a list
+          if (isPrecededByMath && !isInList) {
+            console.warn("Removing raw math text that failed to parse:", textNode.value);
+            textNode.value = "";
+          } else if (isInList) {
+            console.log("Preserving text in list item:", textNode.value);
+          }
+        }
+      });
+    });
+    return tree;
+  };
+
   // Define custom components for ReactMarkdown
   const customComponents = React.useMemo<Components>(() => {
     return {
-      // Customized heading components using the reusable MarkdownHeading
+      // Ensure all heading levels are clickable
       h1: ({ children, ...props }) => (
         <MarkdownHeading level={1} onElementClick={onElementClick} {...props}>
           {children}
@@ -145,6 +216,13 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
         <MarkdownHeading level={6} onElementClick={onElementClick} {...props}>
           {children}
         </MarkdownHeading>
+      ),
+
+      // Make bold text clickable
+      strong: ({ children, ...props }) => (
+        <MarkdownBold onElementClick={onElementClick} {...props}>
+          {children}
+        </MarkdownBold>
       ),
 
       // Customized code block component with copy button
@@ -261,7 +339,12 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
 
   return (
     <div className={`markdown-content ${className}`} {...rest}>
-      <ReactMarkdown components={customComponents} remarkPlugins={[remarkGfm]}>
+      <ReactMarkdown
+        components={customComponents}
+        remarkPlugins={[remarkGfm, remarkMath]} // Prioritize remarkGfm for lists, then math
+        rehypePlugins={[rehypeKatex]} // Ensure KaTeX renders math after remark processing
+        transformAst={cleanMathNodes} // Clean up raw math text post-rendering
+      >
         {processedContent}
       </ReactMarkdown>
     </div>

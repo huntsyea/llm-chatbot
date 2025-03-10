@@ -43,7 +43,7 @@ class GeminiApiClient implements ApiClient {
           temperature: options.temperature ?? 0.7,
           topK: (options as any).topK ?? 40,
           topP: (options as any).topP ?? 0.9,
-          maxOutputTokens: (options as any).maxOutputTokens ?? 2048,
+          maxOutputTokens: (options as any).maxOutputTokens ?? 3900,
         },
       });
 
@@ -71,7 +71,7 @@ class GeminiApiClient implements ApiClient {
     previousContext: string,
     options: ApiClientOptions
   ): Promise<string> {
-    const prompt = `Based on the previous query: "${previousContext}", provide a detailed response about "${topic}".`;
+    const prompt = `Based on the previous query: "${previousContext}", provide a detailed response following previous format about "${topic}".`;
     return this.generateResponse(prompt, options);
   }
 }
