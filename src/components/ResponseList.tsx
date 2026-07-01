@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import { useChatState, useChatDispatch } from "../hooks/useChatContext";
 import ChatResponseCard from "./ChatResponseCard";
 import ResponseSkeleton from "./ResponseSkeleton";
@@ -19,9 +19,12 @@ const ResponseList: React.FC = () => {
   const dispatch = useChatDispatch();
   const prevResponsesLength = useRef<number>(responses.length);
 
-  const setActiveIndex = (index: number) => {
-    dispatch({ type: "SET_ACTIVE_INDEX", payload: index });
-  };
+  const setActiveIndex = useCallback(
+    (index: number) => {
+      dispatch({ type: "SET_ACTIVE_INDEX", payload: index });
+    },
+    [dispatch],
+  );
 
   const canScrollLeft = activeIndex > 0;
   const canScrollRight =
@@ -32,25 +35,23 @@ const ResponseList: React.FC = () => {
       setActiveIndex(responses.length - 1);
       prevResponsesLength.current = responses.length;
     }
-  }, [responses.length]);
+  }, [responses.length, setActiveIndex]);
 
   useEffect(() => {
     if ((isLoading || isLoadingTopic) && activeIndex !== responses.length) {
       setActiveIndex(responses.length);
     }
-  }, [isLoading, isLoadingTopic, responses.length, activeIndex]);
+  }, [
+    isLoading,
+    isLoadingTopic,
+    responses.length,
+    activeIndex,
+    setActiveIndex,
+  ]);
 
   const carouselItems = [
     ...responses.map((response, index) => (
-      <div
-        key={index}
-        className="w-full h-full px-4"
-        aria-label={`Response ${index + 1} of ${responses.length}${isLoading || isLoadingTopic ? " plus loading" : ""}`}
-      >
-        <div className="w-full h-full shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-          <ChatResponseCard response={response} />
-        </div>
-      </div>
+      <ChatResponseCard key={index} response={response} cardIndex={index} />
     )),
     ...(isLoading || isLoadingTopic
       ? [
@@ -71,39 +72,48 @@ const ResponseList: React.FC = () => {
 
   return (
     <div
-      className="container-1200 px-4 sm:px-6 lg:px-8 relative"
+      className="container-1200 px-4 sm:px-6 lg:px-8 relative flex flex-col"
       role="region"
       aria-label="Response cards"
       style={{ height: "calc(100vh - 14rem)" }}
     >
-      {/* Navigation buttons positioned outside the carousel */}
-      {canScrollLeft && (
-        <button
-          onClick={() => setActiveIndex(activeIndex - 1)}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-20 bg-white/90 dark:bg-gray-800/90 p-3 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-          aria-label="Previous response"
-        >
-          <ChevronLeft className="h-6 w-6 text-primary" />
-        </button>
-      )}
-      {canScrollRight && (
-        <button
-          onClick={() => setActiveIndex(activeIndex + 1)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-20 bg-white/90 dark:bg-gray-800/90 p-3 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-          aria-label="Next response"
-        >
-          <ChevronRight className="h-6 w-6 text-primary" />
-        </button>
+      {carouselItems.length > 1 && (
+        <div className="flex h-10 items-center justify-between px-2 sm:px-4">
+          {canScrollLeft ? (
+            <button
+              type="button"
+              onClick={() => setActiveIndex(activeIndex - 1)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-primary shadow-md transition-all hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800/90 dark:hover:bg-gray-800"
+              aria-label="Previous response"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+          ) : (
+            <span className="h-10 w-10" aria-hidden="true" />
+          )}
+          {canScrollRight ? (
+            <button
+              type="button"
+              onClick={() => setActiveIndex(activeIndex + 1)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-primary shadow-md transition-all hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800/90 dark:hover:bg-gray-800"
+              aria-label="Next response"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          ) : (
+            <span className="h-10 w-10" aria-hidden="true" />
+          )}
+        </div>
       )}
 
       {/* Carousel container */}
-      <div className="w-full h-full relative py-6">
+      <div className="w-full min-h-0 flex-1 relative overflow-x-hidden py-4">
         <CardCarousel
           items={carouselItems}
           activeIndex={activeIndex}
           onChangeIndex={setActiveIndex}
-          onDragStart={(index, clientX) => {
-            const newIndex = clientX > 0 && index > 0 ? index - 1 : index + 1;
+          onDragStart={(index, dragDistance) => {
+            const newIndex = dragDistance > 0 ? index - 1 : index + 1;
             setActiveIndex(newIndex);
           }}
           className="w-full h-full"

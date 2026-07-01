@@ -1,6 +1,8 @@
-/* eslint-env node */
+import forms from "@tailwindcss/forms";
+import animate from "tailwindcss-animate";
+
 /** @type {import("tailwindcss").Config} */
-module.exports = {
+export default {
   darkMode: ["class"],
   content: [
     "./pages/**/*.{js,jsx,ts,tsx}",
@@ -55,5 +57,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("@tailwindcss/forms"), require("tailwindcss-animate")],
+  plugins: [forms, animate],
 };

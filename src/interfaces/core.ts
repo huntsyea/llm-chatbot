@@ -39,6 +39,30 @@ export interface ApiClientOptions {
   [key: string]: unknown;
 }
 
+/** Configuration options specific to Gemini models */
+export interface GeminiModelConfig {
+  /** Controls randomness in generation (0.0 to 1.0) */
+  temperature?: number;
+
+  /** Limits token selection to the top K most likely tokens */
+  topK?: number;
+
+  /** Nucleus sampling threshold */
+  topP?: number;
+
+  /** Maximum number of tokens to generate */
+  maxOutputTokens?: number;
+}
+
+/** Extended options specific to Gemini API requests */
+export interface GeminiApiOptions extends ApiClientOptions, GeminiModelConfig {
+  /** Sequences that stop generation */
+  stopSequences?: string[];
+
+  /** MIME type of the response */
+  responseMimeType?: string;
+}
+
 /** Base interface for all API clients */
 export interface ApiClient {
   /**

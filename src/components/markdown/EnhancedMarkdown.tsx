@@ -14,6 +14,153 @@ import {
   MarkdownNormalizationOptions,
 } from "../../services/markdown/MarkdownNormalizer";
 
+const getNodeText = (node: React.ReactNode): string => {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(getNodeText).join("");
+  }
+
+  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+    return getNodeText(node.props.children);
+  }
+
+  return "";
+};
+
+const getCodeLanguage = (node: React.ReactNode): string => {
+  if (Array.isArray(node)) {
+    return node.map(getCodeLanguage).find(Boolean) ?? "";
+  }
+
+  if (React.isValidElement<{ className?: string }>(node)) {
+    const className = node.props.className ?? "";
+    const match = /language-(\w+)/.exec(className);
+    return match ? match[1] : "";
+  }
+
+  return "";
+};
+
+const omitMarkdownNode = <Props extends { node?: unknown }>(
+  props: Props,
+): Omit<Props, "node"> => {
+  const propsWithoutNode = { ...props };
+  delete propsWithoutNode.node;
+  return propsWithoutNode;
+};
+
+const copyTextToClipboard = async (text: string): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.setAttribute("readonly", "true");
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    textArea.setSelectionRange(0, text.length);
+
+    try {
+      const copied = document.execCommand("copy");
+      if (!copied) {
+        throw new Error("Fallback copy command failed");
+      }
+    } finally {
+      document.body.removeChild(textArea);
+    }
+  }
+};
+
+const selectCodeText = (element: HTMLElement | null): boolean => {
+  if (!element) {
+    return false;
+  }
+
+  const selection = window.getSelection();
+  if (!selection) {
+    return false;
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  element.focus({ preventScroll: true });
+  return selection.toString().length > 0;
+};
+
+interface MarkdownCodeBlockProps {
+  children: React.ReactNode;
+  enableCodeCopy: boolean;
+  language: string;
+  preProps: React.HTMLAttributes<HTMLPreElement>;
+}
+
+const MarkdownCodeBlock: React.FC<MarkdownCodeBlockProps> = ({
+  children,
+  enableCodeCopy,
+  language,
+  preProps,
+}) => {
+  const [copyLabel, setCopyLabel] = React.useState("Copy");
+  const preRef = React.useRef<HTMLPreElement>(null);
+  const code = getNodeText(children).replace(/\n$/, "");
+
+  const handleCopyClick = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      await copyTextToClipboard(code);
+      setCopyLabel("Copied");
+    } catch {
+      setCopyLabel(selectCodeText(preRef.current) ? "Selected" : "Copy failed");
+    }
+
+    window.setTimeout(() => setCopyLabel("Copy"), 1500);
+  };
+
+  return (
+    <div className="rounded-md bg-muted overflow-hidden">
+      {(language || (enableCodeCopy && code)) && (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
+          <span className="text-xs text-muted-foreground">
+            {language || "code"}
+          </span>
+          {enableCodeCopy && code && (
+            <button
+              type="button"
+              onClick={handleCopyClick}
+              onPointerDown={(event) => event.stopPropagation()}
+              aria-label="Copy code block"
+              className="bg-primary/10 hover:bg-primary/20 text-primary rounded px-2 py-1 text-xs transition-colors"
+            >
+              {copyLabel}
+            </button>
+          )}
+        </div>
+      )}
+      <pre
+        ref={preRef}
+        tabIndex={-1}
+        className="p-4 overflow-x-auto"
+        {...preProps}
+      >
+        {children}
+      </pre>
+    </div>
+  );
+};
+
 /** Props for the EnhancedMarkdown component */
 export interface EnhancedMarkdownProps {
   /** The markdown content to render */
@@ -52,7 +199,8 @@ const MarkdownHeading: React.FC<MarkdownHeadingProps> = ({
   onElementClick,
   ...props
 }) => {
-  const headerText = String(children).trim();
+  const headerText = getNodeText(children).trim();
+  const headingProps = omitMarkdownNode(props);
 
   // Define styling based on heading level
   const styles = {
@@ -69,17 +217,33 @@ const MarkdownHeading: React.FC<MarkdownHeadingProps> = ({
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Heading clicked:", { level, headerText });
     onElementClick?.("heading", headerText);
   };
 
-  const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    onElementClick?.("heading", headerText);
+  };
+
+  const headingTags = {
+    1: "h1",
+    2: "h2",
+    3: "h3",
+    4: "h4",
+    5: "h5",
+    6: "h6",
+  } as const satisfies Record<MarkdownHeadingProps["level"], React.ElementType>;
+  const HeadingTag = headingTags[level];
 
   return (
     <HeadingTag
       className={className}
       onClick={handleClick}
-      {...props}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      {...headingProps}
     >
       {children}
     </HeadingTag>
@@ -117,94 +281,93 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
     return {
       // Customized heading components using the reusable MarkdownHeading
       h1: ({ children, ...props }) => (
-        <MarkdownHeading level={1} onElementClick={onElementClick} {...props}>
+        <MarkdownHeading
+          level={1}
+          onElementClick={onElementClick}
+          {...omitMarkdownNode(props)}
+        >
           {children}
         </MarkdownHeading>
       ),
       h2: ({ children, ...props }) => (
-        <MarkdownHeading level={2} onElementClick={onElementClick} {...props}>
+        <MarkdownHeading
+          level={2}
+          onElementClick={onElementClick}
+          {...omitMarkdownNode(props)}
+        >
           {children}
         </MarkdownHeading>
       ),
       h3: ({ children, ...props }) => (
-        <MarkdownHeading level={3} onElementClick={onElementClick} {...props}>
+        <MarkdownHeading
+          level={3}
+          onElementClick={onElementClick}
+          {...omitMarkdownNode(props)}
+        >
           {children}
         </MarkdownHeading>
       ),
       h4: ({ children, ...props }) => (
-        <MarkdownHeading level={4} onElementClick={onElementClick} {...props}>
+        <MarkdownHeading
+          level={4}
+          onElementClick={onElementClick}
+          {...omitMarkdownNode(props)}
+        >
           {children}
         </MarkdownHeading>
       ),
       h5: ({ children, ...props }) => (
-        <MarkdownHeading level={5} onElementClick={onElementClick} {...props}>
+        <MarkdownHeading
+          level={5}
+          onElementClick={onElementClick}
+          {...omitMarkdownNode(props)}
+        >
           {children}
         </MarkdownHeading>
       ),
       h6: ({ children, ...props }) => (
-        <MarkdownHeading level={6} onElementClick={onElementClick} {...props}>
+        <MarkdownHeading
+          level={6}
+          onElementClick={onElementClick}
+          {...omitMarkdownNode(props)}
+        >
           {children}
         </MarkdownHeading>
       ),
 
-      // Customized code block component with copy button
-      code: ({
-        className,
-        children,
-        ...props
-      }: React.HTMLAttributes<HTMLElement> & { className?: string }) => {
-        // Handle inline code
-        if (!className) {
-          return (
-            <code className={`bg-muted px-1 py-0.5 rounded text-sm`} {...props}>
-              {children}
-            </code>
-          );
-        }
-
-        // Extract language from className (format: language-*)
-        const match = /language-(\w+)/.exec(className || "");
-        const language = match ? match[1] : "";
-
-        // Function to handle copy button click
-        const handleCopyClick = () => {
-          const code = String(children).replace(/\n$/, "");
-          navigator.clipboard.writeText(code);
-        };
+      pre: ({ children, ...props }) => {
+        const language = getCodeLanguage(children);
+        const preProps = omitMarkdownNode(props);
 
         return (
-          <div className="relative group">
-            {enableCodeCopy && (
-              <button
-                onClick={handleCopyClick}
-                className="absolute top-2 right-2 bg-primary/10 hover:bg-primary/20 text-primary rounded px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                Copy
-              </button>
-            )}
-            <pre
-              className={`p-4 rounded-md bg-muted overflow-x-auto ${className || ""}`}
-            >
-              <code
-                className={language ? `language-${language}` : ""}
-                {...props}
-              >
-                {children}
-              </code>
-            </pre>
-            {language && (
-              <div className="absolute top-0 right-0 bg-muted text-muted-foreground text-xs px-2 py-1 rounded-bl-md">
-                {language}
-              </div>
-            )}
-          </div>
+          <MarkdownCodeBlock
+            enableCodeCopy={enableCodeCopy}
+            language={language}
+            preProps={preProps}
+          >
+            {children}
+          </MarkdownCodeBlock>
         );
       },
+
+      code: ({ className, children, ...props }) => (
+        <code
+          className={
+            className ? className : "bg-muted px-1 py-0.5 rounded text-sm"
+          }
+          {...omitMarkdownNode(props)}
+        >
+          {children}
+        </code>
+      ),
 
       // Customized table component
       table: ({ children, ...props }) => (
         <div className="overflow-x-auto my-4">
-          <table className="w-full border-collapse" {...props}>
+          <table
+            className="w-full border-collapse"
+            {...omitMarkdownNode(props)}
+          >
             {children}
           </table>
         </div>
@@ -214,7 +377,7 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
       th: ({ children, ...props }) => (
         <th
           className="border px-4 py-2 bg-muted font-bold text-left"
-          {...props}
+          {...omitMarkdownNode(props)}
         >
           {children}
         </th>
@@ -222,7 +385,7 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
 
       // Customized table cell
       td: ({ children, ...props }) => (
-        <td className="border px-4 py-2" {...props}>
+        <td className="border px-4 py-2" {...omitMarkdownNode(props)}>
           {children}
         </td>
       ),
@@ -231,7 +394,7 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
       blockquote: ({ children, ...props }) => (
         <blockquote
           className="border-l-4 border-primary/50 pl-4 italic my-4"
-          {...props}
+          {...omitMarkdownNode(props)}
         >
           {children}
         </blockquote>
@@ -239,7 +402,7 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
 
       // Customized list items
       li: ({ children, ...props }) => (
-        <li className="my-1" {...props}>
+        <li className="my-1" {...omitMarkdownNode(props)}>
           {children}
         </li>
       ),
@@ -251,7 +414,7 @@ const EnhancedMarkdown: React.FC<EnhancedMarkdownProps> = ({
           className="text-primary underline hover:text-primary/80 transition-colors"
           target="_blank"
           rel="noopener noreferrer"
-          {...props}
+          {...omitMarkdownNode(props)}
         >
           {children}
         </a>

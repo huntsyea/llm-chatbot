@@ -1,7 +1,7 @@
 import React from "react";
 import ModelSelector from "./ModelSelector";
 import { useChatState, useChatDispatch } from "../hooks/useChatContext";
-import { GeminiModelConfig } from "../api/gemini";
+import { GeminiModelConfig } from "../interfaces/core";
 
 /**
  * ModelControls component manages model selection UI

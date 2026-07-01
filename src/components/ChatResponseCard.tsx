@@ -1,11 +1,7 @@
 import React from "react";
 import MarkdownMessage from "./MarkdownMessage";
 import { Response } from "../interfaces/core";
-import { useChatState, useChatDispatch } from "../hooks/useChatContext";
-import { createTopicClickHandler } from "../lib/topicHandler";
-import { ApiClientRegistryImpl, apiClientRegistry } from "../services/api/ApiClientRegistry";
-import { getModelByValue } from "../lib/models";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useChatDispatch } from "../hooks/useChatContext";
 
 /** Props for the ChatResponseCard component */
 interface ChatResponseCardProps {
@@ -23,8 +19,11 @@ interface ChatResponseCardProps {
  * This component shows the user query and AI response and handles topic click
  * interactions via the MarkdownMessage component.
  */
-const ChatResponseCard: React.FC<ChatResponseCardProps> = ({ response, onDragStart, cardIndex }) => {
-  const { isGeminiModel, selectedModel } = useChatState();
+const ChatResponseCard: React.FC<ChatResponseCardProps> = ({
+  response,
+  onDragStart,
+  cardIndex,
+}) => {
   const dispatch = useChatDispatch();
 
   const [isDragging, setIsDragging] = React.useState(false);
@@ -37,138 +36,106 @@ const ChatResponseCard: React.FC<ChatResponseCardProps> = ({ response, onDragSta
   const VELOCITY_THRESHOLD = 0.5; // px/ms
 
   const setTopicLoading = (isLoading: boolean) => {
-    console.log("Setting topic loading:", isLoading);
     dispatch({ type: "SET_TOPIC_LOADING", payload: isLoading });
   };
 
   const addResponse = (newResponse: Response) => {
-    console.log("Adding new response:", newResponse);
     dispatch({ type: "ADD_RESPONSE", payload: newResponse });
   };
 
-  const modelDef = getModelByValue(selectedModel);
-  const provider = modelDef ? modelDef.provider : "unknown";
-  const apiKey =
-    provider === "openrouter"
-      ? import.meta.env.VITE_OPENROUTER_API_KEY
-      : import.meta.env.VITE_GEMINI_API_KEY;
-      
-  if (!apiKey) {
-    console.error(`No API key found for provider: ${provider}`);
-    return (
-      <Card className="w-full bg-white dark:bg-slate-800 shadow-md relative overflow-hidden mb-4">
-        <CardHeader>
-          <CardTitle>Error: Missing API Key</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>Missing API key for {provider} provider. Please check your environment variables.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  const apiClient = apiClientRegistry.get(provider, apiKey);
-  
-  if (!apiClient) {
-    console.error(`No API client found for provider: ${provider}`);
-    return (
-      <Card className="w-full bg-white dark:bg-slate-800 shadow-md relative overflow-hidden mb-4">
-        <CardHeader>
-          <CardTitle>Error: API Client Unavailable</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>No API client available for {provider} provider.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const startDrag = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (e.button !== 0 || cardIndex === undefined || !onDragStart) return;
+      e.preventDefault();
+      setIsDragging(true);
+      setStartX(e.clientX);
+      lastDragPosition.current = e.clientX;
+      dragStartTime.current = Date.now();
+      if (headerRef.current) {
+        headerRef.current.setPointerCapture(e.pointerId);
+      }
+    },
+    [cardIndex, onDragStart],
+  );
 
-  const handleTopicClick = createTopicClickHandler({
-    response,
-    setTopicLoading,
-    addResponse,
-    apiClient: apiClient!,
-    selectedModel,
-  });
+  const duringDrag = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging) return;
+      lastDragPosition.current = e.clientX;
+    },
+    [isDragging],
+  );
 
-  const startDrag = React.useCallback((e: React.PointerEvent) => {
-    if (e.button !== 0 || cardIndex === undefined || !onDragStart) return;
-    e.preventDefault();
-    setIsDragging(true);
-    setStartX(e.clientX);
-    lastDragPosition.current = e.clientX;
-    dragStartTime.current = Date.now();
-    if (headerRef.current) {
-      headerRef.current.setPointerCapture(e.pointerId);
-    }
-  }, [cardIndex, onDragStart]);
+  const endDrag = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging || cardIndex === undefined || !onDragStart) return;
+      const endTime = Date.now();
+      const dragDuration = endTime - dragStartTime.current;
+      const distance = lastDragPosition.current - startX;
+      const velocity = Math.abs(distance) / dragDuration;
 
-  const duringDrag = React.useCallback((e: React.PointerEvent) => {
-    if (!isDragging) return;
-    lastDragPosition.current = e.clientX;
-  }, [isDragging]);
+      setIsDragging(false);
 
-  const endDrag = React.useCallback((e: React.PointerEvent) => {
-    if (!isDragging || cardIndex === undefined || !onDragStart) return;
-    const endTime = Date.now();
-    const dragDuration = endTime - dragStartTime.current;
-    const distance = lastDragPosition.current - startX;
-    const velocity = Math.abs(distance) / dragDuration;
+      if (
+        Math.abs(distance) > DRAG_THRESHOLD ||
+        velocity > VELOCITY_THRESHOLD
+      ) {
+        onDragStart(distance);
+      }
 
-    setIsDragging(false);
-
-    if (Math.abs(distance) > DRAG_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
-      onDragStart(lastDragPosition.current);
-    }
-
-    if (headerRef.current) {
-      headerRef.current.releasePointerCapture(e.pointerId);
-    }
-  }, [isDragging, startX, cardIndex, onDragStart]);
+      if (headerRef.current) {
+        headerRef.current.releasePointerCapture(e.pointerId);
+      }
+    },
+    [isDragging, startX, cardIndex, onDragStart],
+  );
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-800 overflow-hidden">
-      {response.query && (
-        <header
-          ref={headerRef}
-          className="border-b border-gray-200 dark:border-gray-700 cursor-grab"
-          onPointerDown={startDrag}
-          onPointerMove={duringDrag}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-        >
-          <div className="bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                {response.metadata?.isTopic ? "Wabbit Trail" : "Query"}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {new Date(response.timestamp).toLocaleTimeString()}
-              </span>
+    <div className="w-full h-full px-4">
+      <div className="w-full h-full flex flex-col bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
+        {response.query && (
+          <header
+            ref={headerRef}
+            className="border-b border-gray-200 dark:border-gray-700 cursor-grab"
+            onPointerDown={startDrag}
+            onPointerMove={duringDrag}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          >
+            <div className="bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  {response.metadata?.isTopic ? "Wabbit Trail" : "Query"}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {new Date(response.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+              <h2 className="text-center text-sm sm:text-base break-words font-medium">
+                {response.metadata?.isTopic
+                  ? `${response.metadata.topic}`
+                  : response.query}
+              </h2>
             </div>
-            <h2 className="text-center text-sm sm:text-base break-words font-medium">
-              {response.metadata?.isTopic ? `${response.metadata.topic}` : response.query}
-            </h2>
-          </div>
-        </header>
-      )}
-      <div className="px-3 py-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-          <span className="flex-shrink-0">Model:</span>
-          <span className="ml-1 truncate">{response.model}</span>
-        </p>
-      </div>
-      <div className="flex-grow overflow-y-auto p-3 sm:p-4 space-y-4 scrollbar-thin">
-        <MarkdownMessage
-          message={response.response}
-          response={response}
-          setTopicLoading={setTopicLoading}
-          addResponse={addResponse}
-          onTopicClick={handleTopicClick}
-        />
+          </header>
+        )}
+        <div className="px-3 py-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+            <span className="flex-shrink-0">Model:</span>
+            <span className="ml-1 truncate">{response.model}</span>
+          </p>
+        </div>
+        <div className="min-h-0 flex-grow overflow-y-auto p-3 sm:p-4 space-y-4 scrollbar-thin">
+          <MarkdownMessage
+            message={response.response}
+            response={response}
+            setTopicLoading={setTopicLoading}
+            addResponse={addResponse}
+          />
+        </div>
       </div>
     </div>
   );
 };
 
-export default ChatResponseCard; 
+export default ChatResponseCard;

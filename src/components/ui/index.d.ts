@@ -26,7 +26,7 @@ declare module "@/components/ui/button" {
 declare module "@/components/ui/input" {
   import { InputHTMLAttributes } from "react";
 
-  export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {}
+  export type InputProps = InputHTMLAttributes<HTMLInputElement>;
 
   export const Input: React.FC<InputProps>;
 }
@@ -34,13 +34,12 @@ declare module "@/components/ui/input" {
 declare module "@/components/ui/card" {
   import { HTMLAttributes } from "react";
 
-  export interface CardProps extends HTMLAttributes<HTMLDivElement> {}
-  export interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {}
-  export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {}
-  export interface CardDescriptionProps
-    extends HTMLAttributes<HTMLParagraphElement> {}
-  export interface CardContentProps extends HTMLAttributes<HTMLDivElement> {}
-  export interface CardFooterProps extends HTMLAttributes<HTMLDivElement> {}
+  export type CardProps = HTMLAttributes<HTMLDivElement>;
+  export type CardHeaderProps = HTMLAttributes<HTMLDivElement>;
+  export type CardTitleProps = HTMLAttributes<HTMLHeadingElement>;
+  export type CardDescriptionProps = HTMLAttributes<HTMLParagraphElement>;
+  export type CardContentProps = HTMLAttributes<HTMLDivElement>;
+  export type CardFooterProps = HTMLAttributes<HTMLDivElement>;
 
   export const Card: React.FC<CardProps>;
   export const CardHeader: React.FC<CardHeaderProps>;
@@ -99,8 +98,7 @@ declare module "@/components/ui/radio-group" {
     children?: ReactNode;
   }
 
-  export interface RadioGroupItemProps
-    extends InputHTMLAttributes<HTMLInputElement> {
+  export interface RadioGroupItemProps extends InputHTMLAttributes<HTMLInputElement> {
     value: string;
   }
 

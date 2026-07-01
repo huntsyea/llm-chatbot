@@ -13,7 +13,8 @@ interface TopicHandlerConfig {
 /**
  * Creates a topic click handler for generating topic-specific responses
  *
- * @param config - Configuration object containing response context, callbacks, and API client
+ * @param config - Configuration object containing response context, callbacks,
+ *   and API client
  * @returns A function that handles topic clicks
  */
 export function createTopicClickHandler({
@@ -24,8 +25,6 @@ export function createTopicClickHandler({
   selectedModel,
 }: TopicHandlerConfig) {
   return async (topic: string) => {
-    console.log("Topic click handler called for:", topic, "Current Model:", selectedModel);
-
     // Set the topic-specific loading state
     setTopicLoading(true);
 
@@ -41,13 +40,12 @@ export function createTopicClickHandler({
         topicResponse = await apiClient.generateTopicResponse(
           topic,
           response.query,
-          options
+          options,
         );
       } else {
         const prompt = `Based on the previous query: "${response.query}", provide a detailed response about "${topic}".`;
         topicResponse = await apiClient.generateResponse(prompt, options);
       }
-      console.log("Topic response:", topicResponse);
 
       // Add the new topic response
       const newResponse: Response = {
@@ -61,10 +59,8 @@ export function createTopicClickHandler({
           topic,
         },
       };
-      console.log("Adding new response:", newResponse);
       addResponse(newResponse);
     } catch (error) {
-      console.error("Error fetching topic-specific response:", error);
       const errorResponse: Response = {
         query: topic,
         response: `Error: Failed to fetch topic-specific response for "${topic}"`,
@@ -81,7 +77,6 @@ export function createTopicClickHandler({
     } finally {
       // Reset the topic-specific loading state
       setTopicLoading(false);
-      console.log("Topic loading state reset");
     }
   };
 }

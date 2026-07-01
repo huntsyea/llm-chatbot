@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.next
+tsconfig.tsbuildinfo
 *.local
 
 # Editor directories and files
@@ -25,3 +27,4 @@ dist-ssr
 .vercel
 .env*.local
 .env
+.compound-engineering/*.local.yaml

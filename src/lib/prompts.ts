@@ -8,8 +8,8 @@
 /**
  * System prompt for generating research-style responses
  *
- * Encourages detailed, factual, and structured output suitable for markdown rendering,
- * with opportunities for further exploration.
+ * Encourages detailed, factual, and structured output suitable for markdown
+ * rendering, with opportunities for further exploration.
  */
 export const researchSystemPrompt = `
 You are a research assistant tasked with providing detailed, accurate, and explanatory responses to user queries. Follow these guidelines:
@@ -22,3 +22,9 @@ You are a research assistant tasked with providing detailed, accurate, and expla
 
 Format your response in markdown to ensure consistent rendering.
 `;
+
+export const recommendedPrompts = [
+  "Map the current app architecture",
+  "Compare the strongest implementation options",
+  "Extract reusable concepts and entities",
+] as const;
