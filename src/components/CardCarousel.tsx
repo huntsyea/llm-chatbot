@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useRef, useCallback, useEffect } from "react";
 
 /** Props for the CardCarousel component */
 interface CardCarouselProps {
@@ -11,8 +11,8 @@ interface CardCarouselProps {
   /** Callback when active index changes */
   onChangeIndex: (newIndex: number) => void;
 
-  /** Handler for initiating drag from a card */
-  onDragStart?: (index: number, clientX: number) => void;
+  /** Handler for completing a drag from a card */
+  onDragStart?: (index: number, dragDistance: number) => void;
 
   /** Whether to enable autoplay */
   autoplay?: boolean;
@@ -26,6 +26,11 @@ interface CardCarouselProps {
   /** Accessibility label */
   ariaLabel?: string;
 }
+
+type DraggableCarouselChildProps = {
+  onDragStart?: (dragDistance: number) => void;
+  "data-card-index"?: number;
+};
 
 /**
  * CardCarousel component - A modern carousel with stacking effect
@@ -45,7 +50,8 @@ const CardCarousel: React.FC<CardCarouselProps> = ({
 }) => {
   // References
   const carouselRef = useRef<HTMLDivElement>(null);
-  const autoplayTimerRef = useRef<NodeJS.Timeout>();
+  const autoplayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Constants for animation
   const TRANSITION_DURATION = 400; // ms
@@ -68,17 +74,11 @@ const CardCarousel: React.FC<CardCarouselProps> = ({
       };
 
       // Calculate transform based on distance from center
-      let scale = 1;
-      let translateX = 0;
-      const translateZ = 0;
-      let zIndex = 0;
-      let opacity = 1;
-
-      // Only apply box-shadow to non-active cards
-      let boxShadow =
-        absDistance === 0
-          ? "none"
-          : "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)";
+      let scale: number;
+      let translateX: number;
+      let zIndex: number;
+      let opacity: number;
+      let boxShadow: string;
 
       if (absDistance === 0) {
         // Center card
@@ -86,6 +86,7 @@ const CardCarousel: React.FC<CardCarouselProps> = ({
         translateX = -50;
         zIndex = 10;
         opacity = 1;
+        boxShadow = "none";
       } else if (absDistance === 1) {
         // Adjacent cards
         scale = 0.85;
@@ -123,7 +124,7 @@ const CardCarousel: React.FC<CardCarouselProps> = ({
       // Apply all calculated transforms
       return {
         ...style,
-        transform: `translateX(${translateX}%) scale(${scale}) translateZ(${translateZ}px)`,
+        transform: `translateX(${translateX}%) scale(${scale})`,
         zIndex,
         opacity,
         boxShadow,
@@ -171,29 +172,33 @@ const CardCarousel: React.FC<CardCarouselProps> = ({
     }, autoplayInterval);
   }, [autoplayInterval, goNext, activeIndex, items.length, goToCard]);
 
-  // Debounce utility to limit wheel event frequency
-  const debounce = <T extends (...args: any[]) => void>(
-    func: T,
-    wait: number,
-  ) => {
-    let timeout: NodeJS.Timeout;
-    return (...args: Parameters<T>) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  };
-
   const handleWheel = useCallback(
-    debounce((e: React.WheelEvent) => {
-      if (Math.abs(e.deltaY) < 10) return; // Ignore small scrolls
-      if (e.deltaY > 0 && activeIndex < items.length - 1) {
-        goNext();
-      } else if (e.deltaY < 0 && activeIndex > 0) {
-        goPrev();
+    (event: React.WheelEvent) => {
+      const { deltaY } = event;
+      if (Math.abs(deltaY) < 10) return; // Ignore small scrolls
+
+      if (wheelTimerRef.current) {
+        clearTimeout(wheelTimerRef.current);
       }
-    }, 100),
+
+      wheelTimerRef.current = setTimeout(() => {
+        if (deltaY > 0 && activeIndex < items.length - 1) {
+          goNext();
+        } else if (deltaY < 0 && activeIndex > 0) {
+          goPrev();
+        }
+      }, 100);
+    },
     [activeIndex, items.length, goNext, goPrev],
   );
+
+  useEffect(() => {
+    return () => {
+      if (wheelTimerRef.current) {
+        clearTimeout(wheelTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -242,11 +247,14 @@ const CardCarousel: React.FC<CardCarouselProps> = ({
       }}
     >
       {items.map((item, index) => {
-        const isValidElement = React.isValidElement(item);
+        const isValidElement =
+          React.isValidElement<DraggableCarouselChildProps>(item);
         const enhancedItem = isValidElement
-          ? React.cloneElement(item as React.ReactElement, {
-              onDragStart: onDragStart ? (clientX: number) => onDragStart(index, clientX) : undefined,
-              'data-card-index': index,
+          ? React.cloneElement(item, {
+              onDragStart: onDragStart
+                ? (dragDistance: number) => onDragStart(index, dragDistance)
+                : undefined,
+              "data-card-index": index,
             })
           : item;
 
@@ -255,7 +263,7 @@ const CardCarousel: React.FC<CardCarouselProps> = ({
             key={index}
             className="card-carousel-item"
             style={getCardStyle(index)}
-            {...(index !== activeIndex ? { inert: "" } : {})}
+            {...(index !== activeIndex ? { inert: true } : {})}
             tabIndex={index === activeIndex ? 0 : -1}
             role="group"
             aria-roledescription="slide"

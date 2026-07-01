@@ -103,14 +103,33 @@ export class MarkdownService {
    * @returns Markdown with standardized list formatting
    */
   private enforceListFormatting(markdown: string): string {
-    // Ensure consistent unordered list markers (use - instead of mixed */+/-)
-    let result = markdown.replace(/^(\s*)[*+](\s)/gm, "$1-$2");
+    const unorderedListItem = /^(\s*)([*+-])\s*(\S.*)$/;
+    const orderedListItem = /^(\s*)(\d+\.)\s*(\S.*)$/;
 
-    // Ensure space after list markers
-    result = result.replace(/^(\s*-\S)/gm, "$1 ");
-    result = result.replace(/^(\s*\d+\.\S)/gm, "$1 ");
+    return markdown
+      .split("\n")
+      .map((line) => {
+        const unorderedMatch = unorderedListItem.exec(line);
+        if (unorderedMatch) {
+          const [, indent, marker, content] = unorderedMatch;
+          const markerRun = `${marker}${content.trim()}`;
 
-    return result;
+          if (/^[-*_]{3,}$/.test(markerRun)) {
+            return line;
+          }
+
+          return `${indent}- ${content}`;
+        }
+
+        const orderedMatch = orderedListItem.exec(line);
+        if (orderedMatch) {
+          const [, indent, marker, content] = orderedMatch;
+          return `${indent}${marker} ${content}`;
+        }
+
+        return line;
+      })
+      .join("\n");
   }
 
   /**
@@ -178,8 +197,9 @@ export class MarkdownService {
         })
         .filter(Boolean);
 
-      // Rebuild the table
-      return [headerRow, separatorRow, ...dataRows].join("\n");
+      // Preserve block separation so following fenced code or headings do not
+      // get parsed as part of the table block.
+      return [headerRow, separatorRow, ...dataRows].join("\n") + "\n";
     });
   }
 
@@ -224,13 +244,10 @@ export class MarkdownService {
     result = result.replace(/^~~~(.*)$/gm, "```$1");
 
     // Ensure language tag is lowercase if present
-    result = result.replace(/^```([A-Z][a-zA-Z]*)$/gm, (match, lang) => {
+    result = result.replace(/^```([A-Z][a-zA-Z]*)$/gm, (_match, lang) => {
       return "```" + lang.toLowerCase();
     });
 
-    // Add empty line after code blocks if not present
-    result = result.replace(/```\n(?![\r\n])/gm, "```\n\n");
-
     return result;
   }
-} 
+}

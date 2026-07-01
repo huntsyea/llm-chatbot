@@ -8,6 +8,8 @@ import { ApiClient } from "../../interfaces/core";
 import { ApiClientFactory, ApiClientRegistry } from "./ApiClientInterface";
 import { getGeminiApiClient } from "../../api/gemini";
 import { getOpenRouterApiClient } from "../../api/openRouter";
+import { getMockApiClient } from "../../api/mock";
+import { isMockApiEnabled } from "../../lib/providerConfig";
 
 /** Implementation of the API client registry */
 export class ApiClientRegistryImpl implements ApiClientRegistry {
@@ -18,7 +20,12 @@ export class ApiClientRegistryImpl implements ApiClientRegistry {
   private readonly instanceCache: Map<string, ApiClient> = new Map();
 
   constructor() {
-    // Register available API clients
+    if (isMockApiEnabled()) {
+      this.register("gemini", () => getMockApiClient("gemini"));
+      this.register("openrouter", () => getMockApiClient("openrouter"));
+      return;
+    }
+
     this.register("gemini", getGeminiApiClient);
     this.register("openrouter", getOpenRouterApiClient);
   }
@@ -30,12 +37,6 @@ export class ApiClientRegistryImpl implements ApiClientRegistry {
    * @param factory - Factory function to create instances of the client
    */
   register(name: string, factory: ApiClientFactory): void {
-    if (this.factories.has(name)) {
-      console.warn(
-        `API client "${name}" is already registered. Overwriting previous registration.`,
-      );
-    }
-
     this.factories.set(name, factory);
 
     // Clear cache for this client if it exists
@@ -60,7 +61,6 @@ export class ApiClientRegistryImpl implements ApiClientRegistry {
 
     const factory = this.factories.get(name);
     if (!factory) {
-      console.error(`No API client registered for name: ${name}`);
       return undefined;
     }
 

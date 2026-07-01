@@ -1,7 +1,6 @@
 import * as React from "react";
 import { createContext, useReducer, Dispatch } from "react";
-import { Response } from "../interfaces/core";
-import { GeminiModelConfig, GeminiApiOptions } from "../api/gemini";
+import { Response, GeminiApiOptions } from "../interfaces/core";
 /** Type definition for the chat state */
 export interface ChatState {
   responses: Response[];
@@ -24,7 +23,6 @@ export type ChatAction =
   | { type: "SET_TOPIC_LOADING"; payload: boolean }
   | { type: "SET_MODEL"; payload: { model: string; isGemini: boolean } }
   | { type: "SET_GEMINI_CONFIG"; payload: GeminiApiOptions }
-  | { type: "SET_ACTIVE_INDEX"; payload: number }
   | { type: "SET_ACTIVE_INDEX"; payload: number }
   | { type: string; payload: unknown }; // Extension point
 
@@ -55,7 +53,10 @@ const responseReducer = (state: ChatState, action: ChatAction): ChatState => {
     case "SET_RESPONSES":
       return { ...state, responses: action.payload as Response[] };
     case "ADD_RESPONSE":
-      return { ...state, responses: [...state.responses, action.payload as Response] };
+      return {
+        ...state,
+        responses: [...state.responses, action.payload as Response],
+      };
     default:
       return state;
   }
@@ -67,8 +68,10 @@ const modelReducer = (state: ChatState, action: ChatAction): ChatState => {
     case "SET_MODEL":
       return {
         ...state,
-        selectedModel: (action.payload as { model: string; isGemini: boolean }).model,
-        isGeminiModel: (action.payload as { model: string; isGemini: boolean }).isGemini,
+        selectedModel: (action.payload as { model: string; isGemini: boolean })
+          .model,
+        isGeminiModel: (action.payload as { model: string; isGemini: boolean })
+          .isGemini,
       };
     case "SET_GEMINI_CONFIG":
       return { ...state, geminiConfig: action.payload as GeminiApiOptions };
@@ -96,17 +99,27 @@ const uiReducer = (state: ChatState, action: ChatAction): ChatState => {
 /** Combined reducer for extensibility */
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   const reducers = [responseReducer, modelReducer, uiReducer];
-  return reducers.reduce((currentState, reducer) => reducer(currentState, action), state);
+  return reducers.reduce(
+    (currentState, reducer) => reducer(currentState, action),
+    state,
+  );
 }
 
 /** Chat context */
-export const ChatContext = createContext<{ state: ChatState; dispatch: Dispatch<ChatAction> } | undefined>(undefined);
+export const ChatContext = createContext<
+  { state: ChatState; dispatch: Dispatch<ChatAction> } | undefined
+>(undefined);
 
 /**
  * Chat provider component
+ *
  * @param children - Child components to wrap with context
  */
-export function ChatProvider({ children }: { children: React.ReactNode }): JSX.Element {
+export function ChatProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.JSX.Element {
   const [state, dispatch] = useReducer(chatReducer, initialState);
 
   return (

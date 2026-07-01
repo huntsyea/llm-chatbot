@@ -1,10 +1,10 @@
 import React from "react";
 import { Response } from "../interfaces/core";
 import EnhancedMarkdown from "./markdown/EnhancedMarkdown";
-import { useChatState } from "../hooks/useChatContext";
 import { createTopicClickHandler } from "../lib/topicHandler";
-import { ApiClientRegistryImpl, apiClientRegistry } from "../services/api/ApiClientRegistry";
+import { apiClientRegistry } from "../services/api/ApiClientRegistry";
 import { getModelByValue } from "../lib/models";
+import { getProviderApiKey } from "../lib/providerConfig";
 
 /** Props for the MarkdownMessage component */
 interface MarkdownMessageProps {
@@ -19,16 +19,14 @@ interface MarkdownMessageProps {
 
   /** Function to add a new response */
   addResponse: (response: Response) => void;
-
-  /** Handler for topic clicks */
-  onTopicClick?: (topic: string) => Promise<void>;
 }
 
 /**
  * MarkdownMessage component renders markdown content with clickable headings
  *
  * This component displays a chat message with rich markdown formatting and
- * makes headings clickable to drill down into specific topics using a provider-agnostic API client.
+ * makes headings clickable to drill down into specific topics using a
+ * provider-agnostic API client.
  *
  * @param props - Component props
  * @returns React component for displaying chat messages
@@ -39,45 +37,16 @@ const MarkdownMessage: React.FC<MarkdownMessageProps> = ({
   setTopicLoading,
   addResponse,
 }) => {
-  const { selectedModel } = useChatState();
+  // Fetch the API client for the response model's provider from the registry
+  const modelDef = getModelByValue(response.model);
+  const provider = modelDef?.provider;
+  const apiKey = provider ? getProviderApiKey(provider) : undefined;
 
-  // Fetch the API client for the selected model's provider from the registry
-  const modelDef = getModelByValue(selectedModel);
-  const provider = modelDef ? modelDef.provider : "unknown";
-  const apiKey =
-    provider === "openrouter"
-      ? import.meta.env.VITE_OPENROUTER_API_KEY
-      : import.meta.env.VITE_GEMINI_API_KEY;
-      
-  if (!apiKey) {
-    console.error(`No API key found for provider: ${provider}`);
-    return (
-      <div className="prose dark:prose-invert max-w-none">
-        <div className="p-4 bg-red-100 dark:bg-red-900 rounded-md">
-          Error: Missing API key for {provider} provider. Please check your environment variables.
-        </div>
-        <EnhancedMarkdown content={message} />
-      </div>
-    );
-  }
-  
-  const apiClient = apiClientRegistry.get(provider, apiKey);
-
-  if (!apiClient) {
-    console.error(`No API client found for provider: ${provider} (model: ${selectedModel})`);
-    return (
-      <div className="prose dark:prose-invert max-w-none">
-        <div className="p-4 bg-red-100 dark:bg-red-900 rounded-md">
-          Error: No API client available for {provider} provider.
-        </div>
-        <EnhancedMarkdown content={message} />
-      </div>
-    );
-  }
+  const apiClient =
+    provider && apiKey ? apiClientRegistry.get(provider, apiKey) : undefined;
 
   // Handle element click events from the markdown
   const handleElementClick = (element: string, text: string) => {
-    console.log("Element clicked:", element, "Text:", text);
     if (element === "heading" && apiClient) {
       // Create topic handler with captured state and API client
       const handleTopicClick = createTopicClickHandler({
@@ -85,10 +54,9 @@ const MarkdownMessage: React.FC<MarkdownMessageProps> = ({
         setTopicLoading,
         addResponse,
         apiClient,
-        selectedModel,
+        selectedModel: response.model,
       });
 
-      console.log("Triggering onTopicClick for:", text);
       handleTopicClick(text);
     }
   };

@@ -1,76 +1,93 @@
-/**
- * Centralized registry for LLM models to enable easy extension with new providers and models.
- */
-import { GeminiModelConfig } from "../api/gemini";
+import type { ModelRoute, ProviderId } from "../domain/exploration";
 
-/** Interface for a model definition */
+export const DEFAULT_MODEL_ROUTE_ID = "mock/wabbit-local";
+
 export interface ModelDefinition {
-  /** Display name of the model */
   name: string;
-  /** Unique value/identifier for the model */
   value: string;
-  /** Provider identifier (e.g., 'openrouter', 'gemini') */
   provider: string;
-  /** Optional description for UI display */
   description?: string;
-  /** Optional configuration specific to the model */
-  config?: Partial<GeminiModelConfig> | Record<string, unknown>;
+  config?: Record<string, unknown>;
 }
 
-/** Registry of all available models */
-export const modelRegistry: ModelDefinition[] = [
-  // OpenRouter models
-  { name: "Llama 3.3", value: "meta-llama/llama-3.3-70b-instruct:free", provider: "openrouter" },
-  { name: "DeepSeek R1", value: "deepseek/deepseek-r1:free", provider: "openrouter" },
-  { name: "Phi-4", value: "microsoft/phi-4:free", provider: "openrouter" },
-
-  // Gemini models
+export const modelRoutes: ModelRoute[] = [
   {
-    name: "Gemini 2.0 Flash",
-    value: "gemini-2.0-flash",
-    provider: "gemini",
-    description: "Next generation features, speed, and multimodal generation for a diverse variety of tasks"
+    id: DEFAULT_MODEL_ROUTE_ID,
+    label: "Wabbit Local Mock",
+    provider: "mock",
+    providerGroup: "local",
+    model: "mock/wabbit-local",
+    description: "Deterministic offline responses for exploration and QA.",
+    available: true,
+    isDefault: true,
   },
   {
-    name: "Gemini 2.0 Flash-Lite",
-    value: "gemini-2.0-flash-lite",
-    provider: "gemini",
-    description: "A Gemini 2.0 Flash model optimized for cost efficiency and low latency"
+    id: "gateway/openai-gpt-5.5",
+    label: "OpenAI GPT-5.5",
+    provider: "gateway",
+    providerGroup: "gateway",
+    model: "openai/gpt-5.5",
+    description: "General research and synthesis route through AI Gateway.",
+    available: true,
   },
   {
-    name: "Gemini 2.0 Pro",
-    value: "gemini-2.0-pro-exp",
-    provider: "gemini",
-    description: "Improved quality, especially for world knowledge, code, and long context"
+    id: "gateway/anthropic-claude-sonnet-4.6",
+    label: "Claude Sonnet 4.6",
+    provider: "gateway",
+    providerGroup: "gateway",
+    model: "anthropic/claude-sonnet-4.6",
+    description: "Long-form reasoning and careful response drafting route.",
+    available: true,
   },
   {
-    name: "Gemini 2.0 Flash Thinking",
-    value: "gemini-2.0-flash-thinking-exp",
-    provider: "gemini",
-    description: "Reasoning for complex problems, features new thinking capabilities"
+    id: "gateway/google-gemini-3.1-pro-preview",
+    label: "Gemini 3.1 Pro Preview",
+    provider: "gateway",
+    providerGroup: "gateway",
+    model: "google/gemini-3.1-pro-preview",
+    description: "Broad analysis route for multimodal-ready provider coverage.",
+    available: true,
   },
-  {
-    name: "LearnLM 1.5 Pro Experimental",
-    value: "learnlm-1.5-pro-exp",
-    provider: "gemini",
-    description: "Experimental model with audio, image, video, and text inputs"
-  }
 ];
 
-/**
- * Get models by provider
- * @param provider - The provider ID to filter by
- * @returns Array of models for the specified provider
- */
-export function getModelsByProvider(provider: string): ModelDefinition[] {
-  return modelRegistry.filter(model => model.provider === provider);
+export function getPublicModelRoutes(): ModelRoute[] {
+  return modelRoutes.map((route) => ({ ...route }));
 }
 
-/**
- * Get a model by its value
- * @param value - The unique model value
- * @returns The model definition or undefined if not found
- */
+export function getDefaultModelRoute(): ModelRoute {
+  return (
+    modelRoutes.find((route) => route.isDefault) ??
+    modelRoutes.find((route) => route.available) ??
+    modelRoutes[0]
+  );
+}
+
+export function getModelRoute(routeId: string): ModelRoute | undefined {
+  return modelRoutes.find((route) => route.id === routeId);
+}
+
+export function getModelRoutesByProvider(provider: ProviderId): ModelRoute[] {
+  return modelRoutes.filter((route) => route.provider === provider);
+}
+
+export const modelRegistry: ModelDefinition[] = modelRoutes.map((route) => ({
+  name: route.label,
+  value: route.id,
+  provider:
+    route.provider === "gateway" && route.model.startsWith("google/")
+      ? "gemini"
+      : route.provider === "gateway"
+        ? "openrouter"
+        : route.provider,
+  description: route.description,
+}));
+
+export function getModelsByProvider(provider: string): ModelDefinition[] {
+  return modelRegistry.filter((model) => model.provider === provider);
+}
+
 export function getModelByValue(value: string): ModelDefinition | undefined {
-  return modelRegistry.find(model => model.value === value);
+  return modelRegistry.find(
+    (model) => model.value === value || model.name === value,
+  );
 }

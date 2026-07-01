@@ -1,11 +1,3 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": "/src",
-    },
-  },
-});
+// Retired by the Next.js App Router migration. Kept as a compatibility marker
+// until the legacy Vite entry files are deleted in a confirmed cleanup pass.
+export default {};
